@@ -1,17 +1,18 @@
 import { inject, InjectionKey, provide, reactive, readonly } from "vue";
-import { Interact, InteractAction, User } from "../types";
+import { Interact, InteractAction, Tile, User } from "../types";
 import { createJust, createNothing, Maybe } from "../utils/monado";
 
-type ProvideValue = {
-  value: readonly Interact[];
+export type InteractsProvideValue = {
+  values: readonly Interact[];
+  getValue: (targetTile: Tile) => Maybe<Interact>;
   setValue: (...values: Interact[]) => void;
 };
 
-const PROVIDE_KEY: InjectionKey<ProvideValue> = Symbol();
+const PROVIDE_KEY: InjectionKey<InteractsProvideValue> = Symbol();
 
-export const interactsProvideKey: InjectionKey<ProvideValue> = Symbol('interactsProvide');
+export const interactsProvideKey: InjectionKey<InteractsProvideValue> = Symbol('interactsProvide');
 
-export function useInteractsProvide(): Maybe<ProvideValue> {
+export function useInteractsProvide(): Maybe<InteractsProvideValue> {
   const value = inject(interactsProvideKey);
 
   if (typeof value === 'undefined') {
@@ -28,7 +29,18 @@ export function interactsProvide() {
   interacts.push({ tile: { x: 0, y: 0 }, action: InteractAction.Left });
 
   provide(interactsProvideKey, {
-    value: readonly(interacts),
-    setValue: (...values) => ([...interacts, ...values])
+    values: readonly(interacts),
+    getValue: (targetTile: Tile): Maybe<Interact> => {
+      const currentInteract = interacts.find(({ tile }) => (tile.x === targetTile.x && tile.y === targetTile.y));
+
+      if (typeof currentInteract === 'undefined') {
+        return createNothing();
+      }
+
+      return createJust(currentInteract);
+    },
+    setValue: (...values) => {
+      interacts.push(...values);
+    },
   });
 }

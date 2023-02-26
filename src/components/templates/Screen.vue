@@ -22,16 +22,11 @@ const canvasContext = computed<Maybe<CanvasRenderingContext2D>>(() => {
 
 const interacts = useInteractsProvide();
 
-console.log(interacts);
-
-
 const draw = () => {
-  const { drawBackground, interactBackground } = createCanvasBackground(canvasContext.value);
-  const { drawUser } = createCanvasUser(canvasContext.value, 1);
-  let x = 6;
-  let y = 1;
+  const { drawBackground } = createCanvasBackground(canvasContext.value);
+  const { drawUser } = createCanvasUser(canvasContext.value, interacts);
   let interval = 0;
-  let currentInteract: Maybe<Interact> = createNothing();
+  let isFinished = false;
 
   interval = setInterval(() => {
     if (isNothing(canvasContext.value)) {
@@ -41,7 +36,7 @@ const draw = () => {
 
     const { value: context } = canvasContext.value;
 
-    if (y > 16) {
+    if (isFinished) {
       clearInterval(interval);
       return;
     }
@@ -50,48 +45,7 @@ const draw = () => {
     context.beginPath();
 
     drawBackground();
-    // drawUser();
-    fillCanvasTile(context, x, y, 'red');
-
-    const interact = interactBackground({ x, y });
-
-    if (isJust(interact) && isNothing(currentInteract)) {
-      currentInteract = interact;
-
-      switch (currentInteract.value.action) {
-        case InteractAction.Left:
-          x--;
-          break;
-        case InteractAction.Right:
-          x++;
-          break;
-      }
-
-      context.closePath();
-
-      return;
-    }
-
-    if (isNothing(interact) && isJust(currentInteract)) {
-      switch (currentInteract.value.action) {
-        case InteractAction.Left:
-          x--;
-          break;
-        case InteractAction.Right:
-          x++;
-          break;
-      }
-
-      context.closePath();
-
-      return;
-    }
-
-    if (isJust(interact) && isJust(currentInteract)) {
-      currentInteract = createNothing();
-    }
-
-    y++;
+    isFinished = drawUser();
 
     context.closePath();
   }, 200);

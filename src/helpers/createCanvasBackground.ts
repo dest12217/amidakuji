@@ -1,4 +1,4 @@
-import { inject, provide, ref } from "vue";
+import { inject, provide, reactive, ref } from "vue";
 import { interactsProvideKey, useInteractsProvide } from "../providers/interactsProvide";
 import { Interact, InteractAction, Tile } from "../types";
 import { createJust, createNothing, isNothing, Maybe } from "../utils/monado";
@@ -15,7 +15,11 @@ export const useCanvasBackground = () => ({
 
 export const createCanvasBackground = (context: Maybe<CanvasRenderingContext2D>) => {
   const tiles = ref<Tile[]>([]);
-  const interacts = ref<Interact[]>([]);
+  const interacts = useInteractsProvide();
+
+  if (isNothing(interacts)) {
+    throw new ReferenceError();
+  }
 
   /** 縦線描写 */
   for (let x = 2; x < (TILE_COUNT - 2); x = x + 2) {
@@ -36,7 +40,7 @@ export const createCanvasBackground = (context: Maybe<CanvasRenderingContext2D>)
     }
 
     // インタラクションを設定する
-    interacts.value.push(
+    interacts.value.setValue(
       {
         tile: {
           x: x + 1,
@@ -59,13 +63,13 @@ export const createCanvasBackground = (context: Maybe<CanvasRenderingContext2D>)
   }
 
   const interact = (targetTile: Tile): Maybe<Interact> => {
-    const interact = interacts.value.find(({ tile }) => (tile.x === targetTile.x && tile.y === targetTile.y));
+    const currentInteract = interacts.value.values.find(({ tile }) => (tile.x === targetTile.x && tile.y === targetTile.y));
 
-    if (typeof interact === 'undefined') {
+    if (typeof currentInteract === 'undefined') {
       return createNothing();
     }
 
-    return createJust(interact);
+    return createJust(currentInteract);
   };
 
   const draw = () => {
