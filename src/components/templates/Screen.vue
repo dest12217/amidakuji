@@ -1,11 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, Ref, ref } from 'vue';
 import { createCanvasBackground } from '../../helpers/createCanvasBackground';
-import { fillCanvasTile } from '../../helpers/fillCanvasTile';
-import { createJust, createNothing, isJust, isNothing, Maybe } from '../../utils/monado';
-import { Interact, InteractAction } from "../../types";
+import { createJust, createNothing, isNothing, Maybe } from '../../utils/monado';
 import { createCanvasUser } from '../../helpers/createCanvasUser';
-import { useInteractsProvide } from '../../providers/interactsProvide';
 
 defineProps();
 
@@ -20,36 +17,34 @@ const canvasContext = computed<Maybe<CanvasRenderingContext2D>>(() => {
   return createJust(context);
 });
 
-const interacts = useInteractsProvide();
+const userTotal = 6;
 
 const draw = () => {
-  const { drawBackground } = createCanvasBackground(canvasContext.value);
-  const { drawUser } = createCanvasUser(canvasContext.value, interacts);
+  const { drawBackground } = createCanvasBackground(canvasContext.value, userTotal);
+  const users = Array.from({ length: userTotal }).map((_, index) => (
+    createCanvasUser(canvasContext.value, (2 * (index + 1)))
+  ))
   let interval = 0;
   let isFinished = false;
 
   interval = setInterval(() => {
-    if (isNothing(canvasContext.value)) {
+    if (isFinished || isNothing(canvasContext.value)) {
       clearInterval(interval);
       return;
     }
 
     const { value: context } = canvasContext.value;
 
-    if (isFinished) {
-      clearInterval(interval);
-      return;
-    }
-
     context.clearRect(0, 0, 608, 608);
     context.beginPath();
 
     drawBackground();
-    isFinished = drawUser();
+
+    // 全てのユーザーの描画が完了している場合、完了フラグを立てる
+    isFinished = users.map(({ drawUser }) => drawUser()).every((result) => result);
 
     context.closePath();
   }, 200);
-
 };
 
 onMounted(() => {

@@ -1,16 +1,18 @@
-import { inject } from "vue";
-import { InteractsProvideValue } from "../providers/interactsProvide";
+import { InteractsProvideValue, useInteractsProvide } from "../providers/interactsProvide";
 import { Interact, InteractAction } from "../types";
 import { createNothing, isJust, isNothing, Maybe } from "../utils/monado";
 import { fillCanvasTile } from "./fillCanvasTile";
 
 export const createCanvasUser = (
   context: Maybe<CanvasRenderingContext2D>,
-  interacts: Maybe<InteractsProvideValue>,
+  position: number,
 ) => {
-  let x = 2;
+  let x = position;
   let y = 1;
   let currentInteract: Maybe<Interact> = createNothing();
+  const interacts = useInteractsProvide();
+
+  // console.log(r);
 
   const draw = () => {
     if (isNothing(interacts) || isNothing(context)) {
@@ -19,8 +21,14 @@ export const createCanvasUser = (
 
     fillCanvasTile(context.value, x, y, 'red');
 
+    let isFinished = (y >= 16);
+
+    if (isFinished) {
+      return isFinished;
+    }
+
+
     const interact = interacts.value.getValue({ x, y });
-    let isFinished = (y > 16);
 
     if (isJust(interact) && isNothing(currentInteract)) {
       currentInteract = interact;
