@@ -13,25 +13,33 @@ export const useCanvasBackground = () => ({
   backgroundInteracts: inject<Interact[]>('backgroundInteracts', [])
 });
 
-export const createCanvasBackground = (context: Maybe<CanvasRenderingContext2D>) => {
-  const tiles = ref<Tile[]>([]);
+export const createCanvasBackground = (
+  context: Maybe<CanvasRenderingContext2D>,
+  userTotal: number
+) => {
+  const tiles = reactive<Tile[]>([]);
   const interacts = useInteractsProvide();
+  const startX = Math.floor((TILE_COUNT - (userTotal * 2)) / 2);
+  const startY = 1;
+  const endY = 1;
 
   if (isNothing(interacts)) {
     throw new ReferenceError();
   }
 
+  console.log(startX + (userTotal * 2));
+
   /** 縦線描写 */
-  for (let x = 2; x < (TILE_COUNT - 2); x = x + 2) {
-    for (let y = 1; y < (TILE_COUNT - 1 - 1); y++) {
-      tiles.value.push({ x, y });
+  for (let x = startX; x < (startX + (userTotal * 2)); x = x + 2) {
+    for (let y = startY; y < (TILE_COUNT - startY - endY); y++) {
+      tiles.push({ x, y });
     }
   }
 
   /** 横線描写 */
   let beforeY = 0;
 
-  for (let x = 3; x < (TILE_COUNT - 3); x = x + 2) {
+  for (let x = (startX + 1); x < (startX + (userTotal * 2) - 1); x = x + 2) {
     let y = Math.floor(Math.random() * (16 - 3) + 3);
 
     // ひとつ前の座標と同じにならないようにする
@@ -59,18 +67,8 @@ export const createCanvasBackground = (context: Maybe<CanvasRenderingContext2D>)
 
     beforeY = y;
 
-    tiles.value.push({ x, y })
+    tiles.push({ x, y })
   }
-
-  const interact = (targetTile: Tile): Maybe<Interact> => {
-    const currentInteract = interacts.value.values.find(({ tile }) => (tile.x === targetTile.x && tile.y === targetTile.y));
-
-    if (typeof currentInteract === 'undefined') {
-      return createNothing();
-    }
-
-    return createJust(currentInteract);
-  };
 
   const draw = () => {
     if (isNothing(context)) {
@@ -79,12 +77,12 @@ export const createCanvasBackground = (context: Maybe<CanvasRenderingContext2D>)
 
     context.value.fillStyle = '#efefef';
     context.value.fillRect(0, 0, 608, 608);
-    tiles.value.forEach(({ x, y }) => fillCanvasTile(context.value, x, y, '#000'));
+    tiles.forEach(({ x, y }) => fillCanvasTile(context.value, x, y, '#000'));
   };
 
   return {
-    backgroundTiles: tiles.value,
+    backgroundTiles: tiles,
     drawBackground: draw,
-    interactBackground: interact,
+    tiles: { startX },
   };
 };

@@ -17,12 +17,12 @@ const canvasContext = computed<Maybe<CanvasRenderingContext2D>>(() => {
   return createJust(context);
 });
 
-const userTotal = 6;
+const userTotal = 5;
 
 const draw = () => {
-  const { drawBackground } = createCanvasBackground(canvasContext.value, userTotal);
+  const { drawBackground, tiles } = createCanvasBackground(canvasContext.value, userTotal);
   const users = Array.from({ length: userTotal }).map((_, index) => (
-    createCanvasUser(canvasContext.value, (2 * (index + 1)))
+    createCanvasUser(canvasContext.value, (tiles.startX +  (2 * index)))
   ))
   let interval = 0;
   let isFinished = false;
