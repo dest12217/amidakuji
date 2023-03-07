@@ -1,6 +1,10 @@
+export type UserAvatar = {
+  style: string;
+  map: [number, number];
+};
 export type User = {
   name: string;
-  avatarId: number;
+  avatar: UserAvatar;
 };
 
 export type Tile = {

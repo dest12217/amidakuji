@@ -1,54 +1,48 @@
-import { inject, provide, reactive, ref } from "vue";
-import { interactsProvideKey, useInteractsProvide } from "../providers/interactsProvide";
-import { Interact, InteractAction, Tile } from "../types";
-import { createJust, createNothing, isNothing, Maybe } from "../utils/monado";
-import { fillCanvasTile } from "./fillCanvasTile";
-
-/**
- * @var 1レーンに置けるタイルの数
- */
-const TILE_COUNT = 20;
-
-export const useCanvasBackground = () => ({
-  backgroundInteracts: inject<Interact[]>('backgroundInteracts', [])
-});
+import { reactive } from "vue";
+import { CoreValue, TILE_COUNT } from "../providers/coreProvide";
+import { InteractAction } from "../types";
+import { isNothing } from "../utils/monado";
+import { createRandomNumber } from "./createRandomNumber";
+import { fillCanvasTile, mapTilePattern, TilePattern } from "./fillCanvasTile";
 
 export const createCanvasBackground = (
-  context: Maybe<CanvasRenderingContext2D>,
-  userTotal: number
+  core: CoreValue,
 ) => {
-  const tiles = reactive<Tile[]>([]);
-  const interacts = useInteractsProvide();
-  const startX = Math.floor((TILE_COUNT - (userTotal * 2)) / 2);
-  const startY = 1;
-  const endY = 1;
-
-  if (isNothing(interacts)) {
-    throw new ReferenceError();
-  }
-
-  console.log(startX + (userTotal * 2));
+  const { canvasContext, interacts, grids: { startX, startY, endX, goleX } } = core;
+  const tiles = reactive<TilePattern[][]>([]);
 
   /** 縦線描写 */
-  for (let x = startX; x < (startX + (userTotal * 2)); x = x + 2) {
-    for (let y = startY; y < (TILE_COUNT - startY - endY); y++) {
-      tiles.push({ x, y });
+  for (let x = startX; x < endX; x = x + 2) {
+    tiles[x] = [];
+
+    if (!tiles[x + 1]) {
+      tiles[x + 1] = [];
+    }
+
+    if (!tiles[x - 1]) {
+      tiles[x - 1] = [];
+    }
+
+    for (let y = startY; y < (TILE_COUNT - 1); y++) {
+      tiles[x][y] = 'fill';
+      tiles[x - 1][y] = x === startX ? 'borderRight' : 'borderBoth';
+      tiles[x + 1][y] = x === (endX - 2) ? 'borderLeft': 'borderBoth';
     }
   }
 
   /** 横線描写 */
   let beforeY = 0;
 
-  for (let x = (startX + 1); x < (startX + (userTotal * 2) - 1); x = x + 2) {
-    let y = Math.floor(Math.random() * (16 - 3) + 3);
+  for (let x = (startX + 1); x < (endX - 1); x = x + 2) {
+    let y = createRandomNumber(3, TILE_COUNT - 9);
 
     // ひとつ前の座標と同じにならないようにする
     while (y === beforeY) {
-      y = Math.floor(Math.random() * (16 - 3) + 3);
+      y = createRandomNumber(3, TILE_COUNT - 9);
     }
 
     // インタラクションを設定する
-    interacts.value.setValue(
+    interacts.push(
       {
         tile: {
           x: x + 1,
@@ -67,21 +61,36 @@ export const createCanvasBackground = (
 
     beforeY = y;
 
-    tiles.push({ x, y })
+    if (!tiles[x]) {
+      tiles[x] = [];
+    }
+      tiles[x][y] = 'fill';
+      tiles[x][y - 1] = 'fillDark';
+      tiles[x][y + 1] = 'borderBothTop';
   }
 
-  const draw = () => {
-    if (isNothing(context)) {
+  if (!tiles[goleX]) {
+    tiles[goleX] = [];
+  }
+
+  tiles[goleX][TILE_COUNT - 3] = 'gole';
+
+  const draw = (wark: number) => {
+    if (isNothing(canvasContext)) {
       return;
     }
 
-    context.value.fillStyle = '#efefef';
-    context.value.fillRect(0, 0, 608, 608);
-    tiles.forEach(({ x, y }) => fillCanvasTile(context.value, x, y, '#000'));
+    canvasContext.value.fillStyle = '#000';
+    canvasContext.value.fillRect(0, 0, 608, 608);
+
+    tiles.forEach((row, x) => {
+      row.forEach((pattern, y) => {
+        fillCanvasTile(canvasContext.value, x, y, 'map', ...mapTilePattern[pattern]);
+      });
+    })
   };
 
   return {
-    backgroundTiles: tiles,
     drawBackground: draw,
     tiles: { startX },
   };

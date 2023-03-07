@@ -1,34 +1,46 @@
-import { InteractsProvideValue, useInteractsProvide } from "../providers/interactsProvide";
-import { Interact, InteractAction } from "../types";
-import { createNothing, isJust, isNothing, Maybe } from "../utils/monado";
+import { CoreValue } from "../providers/coreProvide";
+import { Interact, InteractAction, Tile } from "../types";
+import { createJust, createNothing, isJust, isNothing, Maybe } from "../utils/monado";
 import { fillCanvasTile } from "./fillCanvasTile";
 
 export const createCanvasUser = (
-  context: Maybe<CanvasRenderingContext2D>,
+  core: CoreValue,
+  userIndex: number,
   position: number,
 ) => {
+  const { users, canvasContext, interacts, grids: { goleX } } = core;
+  const user = users[userIndex];
   let x = position;
   let y = 1;
   let currentInteract: Maybe<Interact> = createNothing();
-  const interacts = useInteractsProvide();
 
-  // console.log(r);
+  const getInteract = (targetTile: Tile): Maybe<Interact> => {
+    const currentInteract = interacts.find(({ tile }) => (tile.x === targetTile.x && tile.y === targetTile.y));
+
+    if (typeof currentInteract === 'undefined') {
+      return createNothing();
+    }
+
+    return createJust(currentInteract);
+  };
 
   const draw = () => {
-    if (isNothing(interacts) || isNothing(context)) {
+    if (isNothing(canvasContext)) {
       throw new ReferenceError();
     }
 
-    fillCanvasTile(context.value, x, y, 'red');
+    fillCanvasTile(canvasContext.value, x, y, 'character', ...user.avatar.map);
 
     let isFinished = (y >= 16);
 
     if (isFinished) {
-      return isFinished;
+      return {
+        isFinished,
+        isHit: (x === goleX),
+      };
     }
 
-
-    const interact = interacts.value.getValue({ x, y });
+    const interact = getInteract({ x, y });
 
     if (isJust(interact) && isNothing(currentInteract)) {
       currentInteract = interact;
@@ -42,7 +54,10 @@ export const createCanvasUser = (
           break;
       }
 
-      return isFinished;
+      return {
+        isFinished,
+        isHit: (x === goleX),
+      };
     }
 
     if (isNothing(interact) && isJust(currentInteract)) {
@@ -55,7 +70,10 @@ export const createCanvasUser = (
           break;
       }
 
-      return isFinished;
+      return {
+        isFinished,
+        isHit: (x === goleX),
+      };
     }
 
     if (isJust(interact) && isJust(currentInteract)) {
@@ -65,7 +83,10 @@ export const createCanvasUser = (
     y++;
     isFinished = (y > 16);
 
-    return isFinished;
+    return {
+      isFinished,
+      isHit: (x === goleX),
+    };
   }
 
   return {
